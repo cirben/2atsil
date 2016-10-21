@@ -1,0 +1,92 @@
+#include<iostream>
+#include<math.h>
+#include "data.h"
+#include "fload.h"
+#include "Decryptor.h"
+#include "cryptopp/modes.h"
+#include "cryptopp/aes.h"
+#include "cryptopp/filters.h"
+#include "cryptopp/base64.h"
+
+
+using namespace CryptoPP;
+using namespace std;
+
+int main(int argc, char* argv[]){	
+	byte aes_key[32];
+	byte iv[16];
+
+	/*for (int i = 0; i < 16; i++){
+		string sufix = bitset<4>(i).to_string();
+		string text = "Ala ma kota. Kot ma, ale... to jednak ona go posiada. Jednakże gdy przeczytamy to ponownie to...";
+		fload::load_key(aes_key, sizeof(aes_key), "fff17e2dbf33bb28325f4ec937632e3b0ae3d15333b33692d3967532d6473552");
+		fload::load_iv(iv, sizeof(iv), sufix + "df881c75a1a52a21c13b4e752b10d39");
+		
+		string cipher;
+		StringSink* sink = new StringSink(cipher);
+		Base64Encoder* base64_enc = new Base64Encoder(sink);
+		CBC_Mode<AES>::Encryption aes(aes_key, sizeof(aes_key), iv);
+		StreamTransformationFilter* aes_enc = new StreamTransformationFilter(aes, base64_enc);
+		StringSource source(text, true, aes_enc);
+
+		cout << cipher;
+	}*/
+		
+	string sufix = "e2dbf33bb28325f4ec937632e3b0ae3d15333b33692d3967532d6473552";
+	int plen = 64 - sufix.length();	
+	int keyc = pow(16,plen);
+
+	for (int i = 0; i < keyc; i++){
+		string tab = "0123456789abcdef";
+		int tmp = i;
+		string prefix = "";
+		
+		for(int j = 0; j < plen; j++){
+			prefix = tab[tmp%16] + prefix;
+			tmp /= 16;
+		}
+
+		string key =  prefix + sufix; 
+
+		string cipher = "6ONvZI7q7NAUW7wJHkKPu3Zp3OjRM5mpfloPi57755XaDUCb3bf22Xxkdkm6U+vVps9cob0EUm6ekbxJj+Aq+laOYy71CiM5c02Ekdh+Nh+NUzN2LkK+VelSV2bXhegkfApUjKv/rTRLJtNN1sbSjA==";
+		fload::load_key(aes_key, sizeof(aes_key), key);
+		fload::load_iv(iv, sizeof(iv),"fdf881c75a1a52a21c13b4e752b10d39");
+		CBC_Mode<AES>::Decryption dec(aes_key, sizeof(aes_key), iv);
+
+		string cipherDecoded;
+		Base64Decoder decoder;
+		decoder.Attach( new StringSink(cipherDecoded));
+		decoder.Put((byte*)cipher.data(), cipher.size());
+		decoder.MessageEnd();
+
+		string recovered;
+		StringSink* sink = new StringSink(recovered);
+		try{
+			StreamTransformationFilter *aes_dec = new StreamTransformationFilter(dec, sink);
+			StringSource source(cipherDecoded, true, aes_dec);
+		}catch(CryptoPP::InvalidCiphertext a){continue;}
+		
+		bool ok = true;
+		string alph = "\n aąbcćdeęfghijklłmnoópqrsśtuvwxyzżźAĄBCĆDEĘFGHIJKLŁMNOÓPQRSTUVWXYZŻŹ0123456789,.";
+		for(char a : recovered){
+			bool found = false;
+			for(char b : alph){
+				if(a == b){
+					found = true;
+					break;
+				}
+			}
+			if(!found){
+				ok = false;
+				break;
+			}
+		}
+		if(ok){
+			cout << prefix <<endl;
+			cout << recovered << endl;
+		}
+		if(keyc%100000==0){
+			cout << prefix <<endl;
+		}
+	}
+}
